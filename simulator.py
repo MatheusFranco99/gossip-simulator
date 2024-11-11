@@ -28,36 +28,43 @@ class Event:
 class Simulator:
     """Simulator"""
 
-    def __init__(self, num_nodes: int, rho: float, cobra_walk_rho: float, grid_size: int = 100):
+    def __init__(
+        self,
+        network: Network,
+        rho: float,
+        cobra_walk_rho: float,
+        spatial_gossip: bool = True,
+    ):
         # Parameters
         self.dimension = 2
         self.rho = rho
         self.cobra_walk_rho = cobra_walk_rho
-
-        # Build network
-        self.nodes: list[Node] = []
-        for i in range(num_nodes):
-            x = random.randint(0, grid_size)
-            y = random.randint(0, grid_size)
-            node = Node(i, pos = Euclidean2D(x, y))
-            self.nodes.append(node)
-
-        self.network: Network = Network(self.nodes)
+        self.spatial_gossip = spatial_gossip
+        self.network = network
 
         # Spatial gossip structure
         self.spatial_gossip_vectors: dict[NodeID, dict[NodeID, float]] = {}
 
     def setup(self) -> None:
-        """ Setups the simulator for execution """
+        """Setups the simulator for execution"""
         for node in self.nodes:
-            self.spatial_gossip_vectors[node.node_id] = get_spatial_gossip_probability_vector(self.network, node, dimension=self.dimension, rho=self.rho)
+            # Spatial gossip
+            if self.spatial_gossip:
+                self.spatial_gossip_vectors[node.node_id] = (
+                    get_spatial_gossip_probability_vector(
+                        self.network, node, dimension=self.dimension, rho=self.rho
+                    )
+                )
 
             # Uniform distribution
-            # self.spatial_gossip_vectors[node.node_id] = {}
-            # for other_node in self.nodes:
-            #     if other_node.node_id == node.node_id:
-            #         continue
-            #     self.spatial_gossip_vectors[node.node_id][other_node.node_id] = 1/(len(self.nodes)-1)
+            else:
+                self.spatial_gossip_vectors[node.node_id] = {}
+                for other_node in self.nodes:
+                    if other_node.node_id == node.node_id:
+                        continue
+                    self.spatial_gossip_vectors[node.node_id][other_node.node_id] = (
+                        1 / (len(self.nodes) - 1)
+                    )
 
     def select_random_target(self, node_id: NodeID) -> NodeID:
         """Selects a random target for node_id to send a message"""
@@ -80,23 +87,13 @@ class Simulator:
         )
         return distance_vector.norm() * (1 + random.random() / 10)
 
-    def show_network(self) -> None:
-        """ Plots the 2D network in a grid """
-        x = []
-        y = []
-        for node in self.nodes:
-            pos: Euclidean2D = node.pos
-            x.append(pos.x)
-            y.append(pos.y)
-
-        plt.figure(figsize = (10,8))
-        plt.scatter(x, y)
-        plt.grid()
-        plt.show()
-
-
-    def run(self, use_max_time: bool = False, max_time: float = 0, stop_until_all_informed: bool = True) -> list[float]:
-        """ Executes the simulation by:
+    def run(
+        self,
+        use_max_time: bool = False,
+        max_time: float = 0,
+        stop_when_all_informed: bool = True,
+    ) -> list[float]:
+        """Executes the simulation by:
         - Choosing a random source
         - Iterating over the network events unitl max time or all are informed
         """
@@ -110,11 +107,6 @@ class Simulator:
         queue: PriorityQueue = PriorityQueue()
 
         def add_event(queue: PriorityQueue, event: Event) -> PriorityQueue:
-            # print("QUEUE")
-            # for elm in queue.queue:
-            #     print("\t",elm)
-            # print("\tNew event:", event)
-            # print()
             queue.put((event.timestamp, event))
             return queue
 
@@ -137,7 +129,7 @@ class Simulator:
         while not queue.empty():
             if use_max_time and current_time > max_time:
                 break
-            if stop_until_all_informed and len(arrival_time) == len(self.nodes):
+            if stop_when_all_informed and len(arrival_time) == len(self.nodes):
                 break
 
             # Get next event
