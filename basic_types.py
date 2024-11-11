@@ -1,4 +1,5 @@
 """ Basic Types """
 
+
 class NodeID(int):
-    """ NodeID """
+    """NodeID"""

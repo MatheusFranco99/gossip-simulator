@@ -12,9 +12,11 @@ import matplotlib.pyplot as plt
 from position import CoordinateSystemPoint, Euclidean2D
 from spatial_gossip import get_spatial_gossip_probability_vector
 
+
 @dataclass
 class Event:
-    """ Network event """
+    """Network event"""
+
     source: NodeID
     target: NodeID
     timestamp: float
@@ -22,8 +24,9 @@ class Event:
     def __repr__(self):
         return f"Event(source={self.source}, target={self.target}, timestamp={self.timestamp})"
 
+
 class Simulator:
-    """ Simulator """
+    """Simulator"""
 
     def __init__(self, num_nodes: int, rho: float, cobra_walk_rho: float, grid_size: int = 100):
         # Parameters
@@ -57,18 +60,25 @@ class Simulator:
             #     self.spatial_gossip_vectors[node.node_id][other_node.node_id] = 1/(len(self.nodes)-1)
 
     def select_random_target(self, node_id: NodeID) -> NodeID:
-        """ Selects a random target for node_id to send a message """
-        return np.random.choice(list(self.spatial_gossip_vectors[node_id].keys()), p = list(self.spatial_gossip_vectors[node_id].values()))
+        """Selects a random target for node_id to send a message"""
+        return np.random.choice(
+            list(self.spatial_gossip_vectors[node_id].keys()),
+            p=list(self.spatial_gossip_vectors[node_id].values()),
+        )
 
     def get_base_delay(self, node_1: NodeID, node_2: NodeID) -> float:
-        """ Returns the latency between two nodes """
-        distance_vector: CoordinateSystemPoint = (self.nodes[node_1].pos - self.nodes[node_2].pos)
+        """Returns the latency between two nodes"""
+        distance_vector: CoordinateSystemPoint = (
+            self.nodes[node_1].pos - self.nodes[node_2].pos
+        )
         return distance_vector.norm()
 
     def get_delay(self, node_1: NodeID, node_2: NodeID) -> float:
-        """ Returns the latency between two nodes """
-        distance_vector: CoordinateSystemPoint = (self.nodes[node_1].pos - self.nodes[node_2].pos)
-        return distance_vector.norm() * (1 + random.random()/10)
+        """Returns the latency between two nodes"""
+        distance_vector: CoordinateSystemPoint = (
+            self.nodes[node_1].pos - self.nodes[node_2].pos
+        )
+        return distance_vector.norm() * (1 + random.random() / 10)
 
     def show_network(self) -> None:
         """ Plots the 2D network in a grid """
@@ -94,7 +104,7 @@ class Simulator:
         current_time: float = 0
 
         # Select a source
-        source = self.nodes[random.randint(0, len(self.nodes)-1)]
+        source = self.nodes[random.randint(0, len(self.nodes) - 1)]
 
         # Create queue
         queue: PriorityQueue = PriorityQueue()
@@ -110,15 +120,21 @@ class Simulator:
 
         # Create initial event
         target = self.select_random_target(source.node_id)
-        initial_event = Event(source = source.node_id, target = target, timestamp=current_time + self.get_delay(source.node_id, target))
+        initial_event = Event(
+            source=source.node_id,
+            target=target,
+            timestamp=current_time + self.get_delay(source.node_id, target),
+        )
         add_event(queue, initial_event)
 
         # Metrics
-        arrival_time : dict[NodeID, float] = {} # NodeID and the time it first received the message
+        arrival_time: dict[NodeID, float] = (
+            {}
+        )  # NodeID and the time it first received the message
         arrival_time[source.node_id] = 0
 
         # Iterate
-        while (not queue.empty()):
+        while not queue.empty():
             if use_max_time and current_time > max_time:
                 break
             if stop_until_all_informed and len(arrival_time) == len(self.nodes):
@@ -136,14 +152,29 @@ class Simulator:
             # Process message (Cobra-walk algorithm)
             new_source = event.target
             target = self.select_random_target(new_source)
-            queue = add_event(queue, Event(source = new_source, target = target, timestamp = event.timestamp + self.get_delay(new_source, target)))
+            queue = add_event(
+                queue,
+                Event(
+                    source=new_source,
+                    target=target,
+                    timestamp=event.timestamp + self.get_delay(new_source, target),
+                ),
+            )
 
             random_value = random.random()
-            cobra_partition = (random_value <= self.cobra_walk_rho)
+            cobra_partition = random_value <= self.cobra_walk_rho
             if cobra_partition:
                 target2 = self.select_random_target(new_source)
                 if target2 != target:
-                    queue = add_event(queue, Event(source = new_source, target = target2, timestamp = event.timestamp + self.get_delay(new_source, target2)))
+                    queue = add_event(
+                        queue,
+                        Event(
+                            source=new_source,
+                            target=target2,
+                            timestamp=event.timestamp
+                            + self.get_delay(new_source, target2),
+                        ),
+                    )
 
             # Update current time
             current_time = event_time
