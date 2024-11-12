@@ -3,6 +3,8 @@
 from queue import PriorityQueue
 from dataclasses import dataclass
 import random
+
+from matplotlib import animation
 from basic_types import NodeID
 from network import Network
 from node import Node
@@ -30,6 +32,7 @@ class Simulator:
         self.dimension = 2
         self.rho = rho
         self.cobra_walk_rho = cobra_walk_rho
+        self.grid_size = grid_size
 
         # Build network
         self.nodes: list[Node] = []
@@ -92,12 +95,12 @@ class Simulator:
         """
 
         current_time: float = 0
-
         # Select a source
-        source = self.nodes[random.randint(0, len(self.nodes)-1)]
-
+        source = self.nodes[random.randint(0, len(self.nodes) - 1)]
         # Create queue
         queue: PriorityQueue = PriorityQueue()
+        arrival_time: dict[NodeID, float] = {} # NodeID and the time it first received the message
+        arrival_time[source.node_id] = 0
 
         def add_event(queue: PriorityQueue, event: Event) -> PriorityQueue:
             # print("QUEUE")
@@ -113,46 +116,131 @@ class Simulator:
         initial_event = Event(source = source.node_id, target = target, timestamp=current_time + self.get_delay(source.node_id, target))
         add_event(queue, initial_event)
 
-        # Metrics
-        arrival_time : dict[NodeID, float] = {} # NodeID and the time it first received the message
-        arrival_time[source.node_id] = 0
 
-        # Iterate
-        while (not queue.empty()):
-            if use_max_time and current_time > max_time:
-                break
-            if stop_until_all_informed and len(arrival_time) == len(self.nodes):
-                break
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, self.grid_size)  # Set according to your grid size
+        ax.set_ylim(0, self.grid_size)
+        ax.set_title('Network Simulation')
 
-            # Get next event
-            event: Event = None
+        scatter = ax.scatter([node.pos.x for node in self.nodes], [node.pos.y for node in self.nodes], s=100)
+        node_texts = {}
+        for node in self.nodes:
+            node_text = ax.text(node.pos.x, node.pos.y, str(node.node_id), ha='center', va='center')
+            node_texts[node.node_id] = node_text
+        arrow = None
+        next_event_arrow = None
+        next_event_arrow2 = None
+        event_text = ax.text(0.05, 0.95, '', transform=ax.transAxes, ha='left')
+
+        def init():
+            scatter.set_facecolor(['blue'] * len(self.nodes))
+            for text in node_texts.values():
+                text.set_color('white')
+            return scatter, event_text
+
+        def update(frame):
+            nonlocal current_time, queue, arrow, next_event_arrow, next_event_arrow2
+
+            if queue.empty() or (use_max_time and current_time > max_time) or (stop_until_all_informed and len(arrival_time) == len(self.nodes)):
+                anim.event_source.stop()
+                return scatter, event_text
+
             event_time, event = queue.get()
-            # print("Processing event:", event)
+            current_time = event_time
+            source_node = self.nodes[event.source]
+            target_node = self.nodes[event.target]
 
-            # Add target to active, if not yet active
+            if arrow:
+                arrow.remove()
+            arrow = ax.arrow(source_node.pos.x, source_node.pos.y, target_node.pos.x - source_node.pos.x, target_node.pos.y - source_node.pos.y, head_width=1, color='gray')
+
             if event.target not in arrival_time:
                 arrival_time[event.target] = event.timestamp
+                colors = scatter.get_facecolor()
+                colors[target_node.node_id] = [0,1,0,1]  # Mark informed nodes in green
+                colors[source_node.node_id] = [0,1,0,1]  # Mark informed nodes in green
+                scatter.set_facecolor(colors)
+                node_texts[event.target].set_color('green')
 
-            # Process message (Cobra-walk algorithm)
+            # for node_id, node_text in node_texts.items():
+            #     node_text.set_text(str(node_id))
+
             new_source = event.target
             target = self.select_random_target(new_source)
-            queue = add_event(queue, Event(source = new_source, target = target, timestamp = event.timestamp + self.get_delay(new_source, target)))
+            queue = add_event(queue, Event(source=new_source, target=target, timestamp=event.timestamp + self.get_delay(new_source, target)))
+
+            # if next_event_arrow is not None:
+            #     next_event_arrow.remove()
+            #     next_event_arrow = None
+            # if next_event_arrow2 is not None:
+            #     next_event_arrow2.remove()
+            #     next_event_arrow2 = None
+            # new_source_node = self.nodes[new_source]
+            # new_target_node = self.nodes[target]
+            # next_event_arrow = ax.arrow(new_source_node.pos.x, new_source_node.pos.y, new_target_node.pos.x - new_source_node.pos.x, new_target_node.pos.y - new_source_node.pos.y, head_width=1, color='purple', linestyle="--")
 
             random_value = random.random()
-            cobra_partition = (random_value <= self.cobra_walk_rho)
-            if cobra_partition:
+            if random_value <= self.cobra_walk_rho:
                 target2 = self.select_random_target(new_source)
                 if target2 != target:
-                    queue = add_event(queue, Event(source = new_source, target = target2, timestamp = event.timestamp + self.get_delay(new_source, target2)))
+                    queue = add_event(queue, Event(source=new_source, target=target2, timestamp=event.timestamp + self.get_delay(new_source, target2)))
 
-            # Update current time
-            current_time = event_time
+                    # new_source_node = self.nodes[new_source]
+                    # new_target_node = self.nodes[target2]
+                    # next_event_arrow2 = ax.arrow(new_source_node.pos.x, new_source_node.pos.y, new_target_node.pos.x - new_source_node.pos.x, new_target_node.pos.y - new_source_node.pos.y, head_width=1, color='purple', linestyle="--")
 
-        # Compute stretch
-        stretch: list[float] = []
+
+            event_text.set_text(f"Current Event: {event.source} -> {event.target} at {event.timestamp:.2f}")
+            return scatter, event_text, arrow
+
+        anim = animation.FuncAnimation(fig, update, init_func=init, frames = 500, blit=True, interval=1000)
+        anim.save('gossip.mp4', writer='ffmpeg', fps=30)
+        # plt.show()
+
+        stretch = []
         for node, time in arrival_time.items():
             if node == source.node_id:
                 continue
             stretch.append(time / self.get_base_delay(source.node_id, node))
 
         return stretch
+
+        # # Iterate
+        # while (not queue.empty()):
+        #     if use_max_time and current_time > max_time:
+        #         break
+        #     if stop_until_all_informed and len(arrival_time) == len(self.nodes):
+        #         break
+
+        #     # Get next event
+        #     event: Event = None
+        #     event_time, event = queue.get()
+        #     # print("Processing event:", event)
+
+        #     # Add target to active, if not yet active
+        #     if event.target not in arrival_time:
+        #         arrival_time[event.target] = event.timestamp
+
+        #     # Process message (Cobra-walk algorithm)
+        #     new_source = event.target
+        #     target = self.select_random_target(new_source)
+        #     queue = add_event(queue, Event(source = new_source, target = target, timestamp = event.timestamp + self.get_delay(new_source, target)))
+
+        #     random_value = random.random()
+        #     cobra_partition = (random_value <= self.cobra_walk_rho)
+        #     if cobra_partition:
+        #         target2 = self.select_random_target(new_source)
+        #         if target2 != target:
+        #             queue = add_event(queue, Event(source = new_source, target = target2, timestamp = event.timestamp + self.get_delay(new_source, target2)))
+
+        #     # Update current time
+        #     current_time = event_time
+
+        # # Compute stretch
+        # stretch: list[float] = []
+        # for node, time in arrival_time.items():
+        #     if node == source.node_id:
+        #         continue
+        #     stretch.append(time / self.get_base_delay(source.node_id, node))
+
+        # return stretch
