@@ -47,7 +47,7 @@ class Simulator:
 
     def setup(self) -> None:
         """Setups the simulator for execution"""
-        for node in self.nodes:
+        for node in self.network.nodes:
             # Spatial gossip
             if self.spatial_gossip:
                 self.spatial_gossip_vectors[node.node_id] = (
@@ -59,11 +59,11 @@ class Simulator:
             # Uniform distribution
             else:
                 self.spatial_gossip_vectors[node.node_id] = {}
-                for other_node in self.nodes:
+                for other_node in self.network.nodes:
                     if other_node.node_id == node.node_id:
                         continue
                     self.spatial_gossip_vectors[node.node_id][other_node.node_id] = (
-                        1 / (len(self.nodes) - 1)
+                        1 / (len(self.network.nodes) - 1)
                     )
 
     def select_random_target(self, node_id: NodeID) -> NodeID:
@@ -76,14 +76,14 @@ class Simulator:
     def get_base_delay(self, node_1: NodeID, node_2: NodeID) -> float:
         """Returns the latency between two nodes"""
         distance_vector: CoordinateSystemPoint = (
-            self.nodes[node_1].pos - self.nodes[node_2].pos
+            self.network.nodes[node_1].pos - self.network.nodes[node_2].pos
         )
         return distance_vector.norm()
 
     def get_delay(self, node_1: NodeID, node_2: NodeID) -> float:
         """Returns the latency between two nodes"""
         distance_vector: CoordinateSystemPoint = (
-            self.nodes[node_1].pos - self.nodes[node_2].pos
+            self.network.nodes[node_1].pos - self.network.nodes[node_2].pos
         )
         return distance_vector.norm() * (1 + random.random() / 10)
 
@@ -101,7 +101,7 @@ class Simulator:
         current_time: float = 0
 
         # Select a source
-        source = self.nodes[random.randint(0, len(self.nodes) - 1)]
+        source = self.network.nodes[random.randint(0, len(self.network.nodes) - 1)]
 
         # Create queue
         queue: PriorityQueue = PriorityQueue()
@@ -129,7 +129,7 @@ class Simulator:
         while not queue.empty():
             if use_max_time and current_time > max_time:
                 break
-            if stop_when_all_informed and len(arrival_time) == len(self.nodes):
+            if stop_when_all_informed and len(arrival_time) == len(self.network.nodes):
                 break
 
             # Get next event
