@@ -33,13 +33,19 @@ class Network:
         return cls(nodes, pings)
 
     @classmethod
-    def from_dicts(cls, data: dict[int, dict[int, tuple[float, float]]], coords: dict[int, tuple[float, float]]):
+    def from_dicts(cls, data: dict[int, dict[int, tuple[float, float]]], coords: dict[int, tuple[float, float]], fraction: float = 1):
         nodes: list[Node] = []
 
         node_ids: set[NodeID] = set()
 
-        for node_id, coord in coords.items():
-            nodes.append(Node(node_id, pos=Euclidean2D(*coord)))
+        coords_keys = list(coords.keys())
+        if fraction < 1:
+            random.shuffle(coords_keys)
+            num_keys = int(len(coords_keys) * fraction)
+            coords_keys = coords_keys[:num_keys]
+
+        for node_id in coords_keys:
+            nodes.append(Node(node_id, pos=Euclidean2D(*coords[node_id])))
             node_ids.add(node_id)
 
         pings = {node1.node_id: {node2.node_id: Ping(float("inf"), 0) for node2 in nodes} for node1 in nodes}
@@ -67,7 +73,7 @@ class Network:
         """Returns the latency between two nodes"""
 
         ping = self.pings[node_1][node_2]
-        return ping.base + np.random.normal(0, ping.std_dev)
+        return ping.base + abs(np.random.normal(0, ping.std_dev))
 
     def show_network(self) -> None:
         """Plots the 2D network in a grid"""
@@ -91,6 +97,7 @@ class Network:
         #         plt.text(x = (pos1.x + pos2.x)/2, y = (pos1.y + pos2.y)/2, s = f"{self.pings[node1.node_id][node2.node_id].base:.2f}")
 
         plt.grid()
+        plt.savefig("network.png", dpi = 300)
         plt.show()
 
 
@@ -100,8 +107,8 @@ def servers_csv_to_dict(filename: str) -> dict[int, tuple[float, float]]:
     node_coordinates = df.set_index('id')[['latitude', 'longitude']].T.to_dict()
 
     keys = list(node_coordinates.keys())
-    random.shuffle(keys)
-    keys = keys[:int(len(keys)/3)]
+    # random.shuffle(keys)
+    # keys = keys[:int(len(keys)/3)]
 
     node_coordinates = {k: (float(node_coordinates[k]['latitude']), float(node_coordinates[k]['longitude'])) for k in keys}
     return node_coordinates
@@ -120,5 +127,3 @@ def pings_csv_to_dict(filename: str) -> dict[str, dict[str, list[str]]]:
                 data[source] = {}
             data[source][destination] = (ping_avg, ping_std_dev)
     return data
-
-servers_csv_to_dict("servers.csv")

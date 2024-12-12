@@ -12,3 +12,4 @@ class Node:
 
     node_id: NodeID
     pos: CoordinateSystemPoint
+
