@@ -10,7 +10,7 @@ from clustering import create_cluster_nodes
 from network import Network
 from node import Node
 from position import CoordinateSystemPoint
-from probability import select_from_group, select_samples_from_group_without_replacement
+from probability import select_from_group, select_samples_from_group_without_replacement, bernoulli_event
 
 
 class GossipAlgorithm(abc.ABC):
@@ -47,9 +47,7 @@ class CobraWalk(GossipAlgorithm):
     def select_targets(self, node_id: NodeID) -> list[NodeID]:
         target1 = self.get_random_target()
 
-        random_value = random.random()
-        cobra_partition = random_value <= self.rho
-        if cobra_partition:
+        if bernoulli_event(self.rho):
             target2 = self.get_random_target()
             if target1 != target2:
                 return [target1, target2]
