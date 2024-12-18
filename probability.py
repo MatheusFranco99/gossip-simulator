@@ -10,7 +10,7 @@ def bernoulli_event(probability: float) -> bool:
     p = random.random()
     return p <= probability
 
-def select_from_group(population: list) -> bool:
+def select_from_group(population: list):
     """ Sample an event """
     return random.choice(population)
 
