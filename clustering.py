@@ -31,7 +31,7 @@ def create_cluster_nodes(network: Network, n_clusters: int = 9) -> tuple[dict[in
     cluster_map: dict[int, list[NodeID]] = defaultdict(list)
     node_to_cluster_map: dict[NodeID,int] = {}
     for node, cluster_label in zip(network.nodes, clustering.labels_):
-        cluster_map[cluster_label].append(node.node_id)
+        cluster_map[cluster_label].append(node)
         node_to_cluster_map[node.node_id] = cluster_label
 
     # y = [node.pos.x for node in network.nodes]
