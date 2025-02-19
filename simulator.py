@@ -112,10 +112,9 @@ class Simulator:
 
             # Add target to active, if not yet active
             if event.target not in arrival_time:
-                print(len(arrival_time)/len(self.network.nodes), queue.qsize())
                 arrival_time[event.target] = event.timestamp
 
-            # Process message (Cobra-walk algorithm)
+            # Process message
             new_source = event.target
             targets = self.select_targets(new_source)
             for target in targets:
@@ -136,9 +135,9 @@ class Simulator:
 
         # Runs attackers
         attacker_results = []
-        # for attacker in attackers:
-        #     guess = attacker.guess()
-        #     attacker_results.append(guess == self.first_source.node_id)
+        for attacker in attackers:
+            guess = attacker.guess()
+            attacker_results.append(guess == self.first_source.node_id)
 
         # Compute stretch
         metrics = Metrics(self.network, self.first_source, arrival_time)
