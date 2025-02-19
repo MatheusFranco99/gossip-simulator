@@ -59,11 +59,9 @@ class Metrics:
 
     def get_stretch(self) -> Metric:
         """Computes the stretch"""
-        print("stretch debug")
         stretches: list[float] = []
         for node, time in self.arrival_times.items():
             if node == self.source.node_id:
                 continue
             stretches.append(time / self.network.get_base_delay(self.source.node_id, node))
-            print(time, self.network.get_base_delay(self.source.node_id, node))
         return Metric(stretches)
