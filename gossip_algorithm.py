@@ -188,3 +188,13 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
             inter_targets = select_samples_from_group_without_replacement(possible_targets, k = self.fanout_inter)
 
         return intra_targets + inter_targets
+
+class GossipSub(GossipAlgorithm):
+    """GossipSub"""
+
+    def __init__(self, network, fanout: int):
+        super().__init__(network)
+        self.fanout = fanout
+
+    def select_targets(self, node_id: NodeID) -> list[NodeID]:
+        return select_samples_from_group_without_replacement(self.node_ids, k = self.fanout)
