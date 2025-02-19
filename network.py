@@ -84,8 +84,13 @@ class Network:
             x.append(pos.x)
             y.append(pos.y)
 
-        plt.figure(figsize=(10, 8))
-        plt.scatter(y, x)
+        plt.figure(figsize=(9 / 2.54, 6 / 2.54))
+        plt.scatter(y, x, s=1, c="black")
+
+        x_min, x_max = -180, 180
+        y_min, y_max = -90, 90
+        plt.xlim(x_min, x_max)
+        plt.ylim(y_min, y_max)
 
         # for node1 in self.nodes:
         #     for node2 in self.nodes:
@@ -97,7 +102,10 @@ class Network:
         #         plt.text(x = (pos1.x + pos2.x)/2, y = (pos1.y + pos2.y)/2, s = f"{self.pings[node1.node_id][node2.node_id].base:.2f}")
 
         plt.grid()
-        plt.savefig("network.png", dpi = 300)
+        plt.xlabel("Longitude")
+        plt.ylabel("Latitude")
+        plt.tight_layout()  # Adjust layout before saving
+        plt.savefig("network.png", dpi=300)
         plt.show()
 
 
