@@ -74,7 +74,7 @@ class UniformEstimator(Attacker):
 
         delivery_time = max(0.1, event.timestamp)
         delivery_time_factor = delivery_time/0.1
-        self.probability[event.source] = self.probability[event.target] +  1/(self.num_honest_peers) * (1/delivery_time_factor)
+        self.probability[event.source] = self.probability[event.source] +  1/(self.num_honest_peers) * (1/delivery_time_factor)
 
         self.normalize()
 
