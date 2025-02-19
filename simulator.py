@@ -54,6 +54,7 @@ class Simulator:
 
 
         current_time: float = 0
+        current_id: int = 0
 
         # Create queue
         queue: PriorityQueue = PriorityQueue()
@@ -63,17 +64,21 @@ class Simulator:
         node_receipt_counter: dict[NodeID, int] = collections.defaultdict(int)
 
         def add_event(queue: PriorityQueue, event: Event) -> PriorityQueue:
-            queue.put((event.timestamp, event))
+            queue.put((event.timestamp, event.id, event))
             return queue
 
         # Create initial event
         targets = self.select_targets(self.first_source.node_id)
+        node_receipt_counter[self.first_source.node_id] += 1
         for target in targets:
             initial_event = Event(
                 source=self.first_source.node_id,
                 target=target,
-                timestamp=current_time + self.network.get_delay(self.first_source.node_id, target),
+                timestamp=current_time
+                + self.network.get_delay(self.first_source.node_id, target),
+                id=current_id,
             )
+            current_id += 1
             add_event(queue, initial_event)
 
         # Metrics
@@ -91,7 +96,7 @@ class Simulator:
 
             # Get next event
             event: Event | None = None
-            event_time, event = queue.get()
+            event_time, _, event = queue.get()
 
             # Check if node is still processing events
             if node_receipt_counter[event.target] > msg_receival_limit:
@@ -119,9 +124,12 @@ class Simulator:
                     Event(
                         source=new_source,
                         target=target,
-                        timestamp=event.timestamp + self.network.get_delay(new_source, target),
+                        timestamp=event.timestamp
+                        + self.network.get_delay(new_source, target),
+                        id=current_id,
                     ),
                 )
+                current_id += 1
 
             # Update current time
             current_time = event_time
