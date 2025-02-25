@@ -100,10 +100,11 @@ class HierarchialGossip(GossipAlgorithm):
 class SpatialGossip(GossipAlgorithm):
     """SpatialGossip"""
 
-    def __init__(self, network, dimension: int, rho: float):
+    def __init__(self, network, dimension: int, rho: float, fanout: int):
         super().__init__(network)
         self.dimension: int = dimension
         self.rho: float = rho
+        self.fanout: int = fanout
 
         # Pre-compute probabilities
         self.spatial_gossip_vectors: dict[NodeID, dict[NodeID, float]] = {}
@@ -115,12 +116,17 @@ class SpatialGossip(GossipAlgorithm):
             )
 
     def select_targets(self, node_id: NodeID) -> list[NodeID]:
-        return [
-            np.random.choice(
+        targets = np.random.choice(
                 list(self.spatial_gossip_vectors[node_id].keys()),
                 p=list(self.spatial_gossip_vectors[node_id].values()),
+                replace=False,
+                size = self.fanout,
             )
-        ]
+        # Force to return a list
+        if isinstance(targets, list) or isinstance(targets, np.ndarray):
+            return targets.tolist()
+        else:
+            return [targets]
 
     def calculate_probability(
         self, node: Node, other_node: Node, dimension: int, rho: float
@@ -154,7 +160,7 @@ class SpatialGossipWithCobraWalk(SpatialGossip):
     """SpatialGossip"""
 
     def __init__(self, network, dimension: int, rho: float, cobra_walk_rho):
-        super().__init__(network, dimension, rho)
+        super().__init__(network, dimension, rho, 1)
         self.cobra_walk_rho: float = cobra_walk_rho
 
     def select_targets(self, node_id: NodeID) -> list[NodeID]:
