@@ -1,4 +1,4 @@
-""" Network """
+"""Network"""
 
 import numpy as np
 import pandas as pd
@@ -40,8 +40,8 @@ class Network:
     @classmethod
     def from_dicts(
         cls,
-        data: dict[int, dict[int, tuple[float, float]]],
-        coords: dict[int, tuple[float, float]],
+        data: dict[NodeID, dict[NodeID, tuple[float, float]]],
+        coords: dict[NodeID, tuple[float, float]],
         fraction: float = 1,
     ):
         nodes: list[Node] = []

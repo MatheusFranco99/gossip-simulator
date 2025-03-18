@@ -1,7 +1,8 @@
-""" Probability """
+"""Probability"""
 
 import copy
 import random
+import numpy as np
 
 
 def bernoulli_event(probability: float) -> bool:
@@ -23,9 +24,9 @@ def select_samples_from_group_with_replacement(population: list, k: int = 1) -> 
 
 def select_samples_from_group_without_replacement(population: list, k: int = 1) -> list:
     """Select samples from a population without replacement"""
-    copied_population = copy.copy(population)
-    random.shuffle(copied_population)
-    return copied_population[:k]
+    if k > len(population):
+        return copy.deepcopy(population)
+    return np.random.choice(population, k, replace=False)
 
 
 def hypergeometric_sample(a: int, b: int, k: int) -> int:

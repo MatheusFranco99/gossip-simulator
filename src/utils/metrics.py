@@ -1,4 +1,4 @@
-""" Metrics """
+"""Metrics"""
 
 import numpy as np
 from utils.basic_types import Node, NodeID
@@ -83,6 +83,8 @@ class Metrics:
         stretches: list[float] = []
         for node, time in self.arrival_times.items():
             if node == self.source.node_id:
+                continue
+            if self.network.get_base_delay(self.source.node_id, node) == float("inf"):
                 continue
             stretches.append(
                 time / self.network.get_base_delay(self.source.node_id, node)

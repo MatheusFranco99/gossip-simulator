@@ -1,4 +1,4 @@
-""" Simulator """
+"""Simulator"""
 
 import collections
 from queue import PriorityQueue
@@ -26,10 +26,13 @@ class Simulator:
         self.dimension = 2
         self.gossip_algorithm = gossip_algorithm
         self.network = network
-        self.first_source: Node | None = None
 
-    def setup(self) -> None:
+    def setup(self, source=None) -> None:
         """Setups the simulator for execution"""
+        if source is not None:
+            self.first_source = source
+            return
+
         # Select a source
         self.first_source: Node = self.network.nodes[
             random.randint(0, len(self.network.nodes) - 1)
@@ -51,7 +54,10 @@ class Simulator:
         - Choosing a random source
         - Iterating over the network events until max time or all are informed
         """
-
+        curious_id_to_attacker = collections.defaultdict(list)
+        for attacker in attackers:
+            for node_id in attacker.curious_node_ids:
+                curious_id_to_attacker[node_id] += [attacker]
         current_time: float = 0
         current_id: int = 0
 
@@ -104,8 +110,8 @@ class Simulator:
             # print("Processing event:", event)
 
             # Send event to attackers
-            for attacker in attackers:
-                if attacker.has_access_to_event(event):
+            if event.target in curious_id_to_attacker:
+                for attacker in curious_id_to_attacker[event.target]:
                     attacker.process_event(event)
 
             # Add target to active, if not yet active

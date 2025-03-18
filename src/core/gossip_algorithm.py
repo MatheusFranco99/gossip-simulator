@@ -186,6 +186,7 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
         intra_cobra_walk_rho: float,
         fanout_inter: int,
         num_clusters: int,
+        fanout_cobra: int = 2,
     ):
         super().__init__(network)
         self.clusters, self.node_cluster = create_cluster_nodes(
@@ -200,6 +201,7 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
 
         self.inter_cluster_probability = inter_cluster_probability
         self.intra_cobra_walk_rho = intra_cobra_walk_rho
+        self.fanout_cobra = fanout_cobra
         self.fanout_inter = fanout_inter
 
     def select_targets(self, node_id: NodeID) -> list[NodeID]:
@@ -209,7 +211,7 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
         intra_targets: list[NodeID] = []
         if bernoulli_event(self.intra_cobra_walk_rho):
             intra_targets = select_samples_from_group_without_replacement(
-                self.clusters[node_cluster_id], k=2
+                self.clusters[node_cluster_id], k=self.fanout_cobra
             )
         else:
             intra_targets = [select_from_group(self.clusters[node_cluster_id])]
@@ -229,7 +231,7 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
                 possible_targets, k=self.fanout_inter
             )
 
-        return intra_targets + inter_targets
+        return np.concatenate([intra_targets, inter_targets]).tolist()
 
 
 class GossipSub(GossipAlgorithm):

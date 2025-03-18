@@ -1,4 +1,4 @@
-""" This file adds the Attacker class (and some examples) for the anonymity simulation """
+"""This file adds the Attacker class (and some examples) for the anonymity simulation"""
 
 from abc import ABC, abstractmethod
 import random
@@ -71,31 +71,40 @@ class UniformEstimator(Attacker):
             if peer_id not in self.curious_node_ids:
                 self.probability[peer_id] = uniform_probability
 
+        # Track the total sum of probabilities to avoid recalculating
+        self.total_sum = 0
+
     def normalize(self) -> None:
-        """This function normalizes all probabilities"""
-        total_sum = sum(self.probability.values())
-        for i, p in self.probability.items():
-            self.probability[i] = p / total_sum
+        """Normalizes all probabilities"""
+        if self.total_sum > 0:
+            for i, p in self.probability.items():
+                self.probability[i] = p / self.total_sum
 
     def process_event(self, event: Event) -> None:
+        """Processes a single event and updates the probability of the sender"""
         # If sender is a curious node, just return
         if event.source in self.curious_node_ids:
             return
 
         delivery_time = max(0.1, event.timestamp)
         delivery_time_factor = delivery_time / 0.1
-        self.probability[event.source] = self.probability[event.source] + 1 / (
-            self.num_honest_peers
-        ) * (1 / delivery_time_factor)
 
-        self.normalize()
+        # Update probability
+        prob_update = 1 / (self.num_honest_peers * delivery_time_factor)
+        self.probability[event.source] = (
+            self.probability.get(event.source, 0) + prob_update
+        )
+
+        self.total_sum += prob_update
 
     def process_all_events(
         self, curious_nodes_events: dict[NodeID, list[Event]]
     ) -> None:
+        """Processes all events at once"""
         for events in curious_nodes_events.values():
             for event in events:
                 self.process_event(event)
+        self.normalize()
 
 
 class LowestTimeEstimator(Attacker):
