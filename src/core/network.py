@@ -151,5 +151,85 @@ def pings_csv_to_dict(filename: str) -> dict[str, dict[str, list[str]]]:
             ping_std_dev = float(parts[6].replace('"', ""))
             if source not in data:
                 data[source] = {}
-            data[source][destination] = (ping_avg, ping_std_dev)
+            if destination not in data[source]:
+                data[source][destination] = []
+            data[source][destination].append((ping_avg, ping_std_dev))
+
+    # Average the ping samples
+    for node1 in data:
+        for node2 in data[node1]:
+            pings_avg = [ping[0] for ping in data[node1][node2]]
+            pings_std_dev = [ping[1] for ping in data[node1][node2]]
+            data[node1][node2] = (
+                sum(pings_avg) / len(pings_avg),
+                sum(pings_std_dev) / len(pings_std_dev),
+            )
+
+    return data
+
+
+def pings_csv_to_dict_complete(filename: str) -> dict[str, dict[str, list[str]]]:
+    data = {}
+    with open(filename, "r") as file:
+        next(file)
+        for line in file:
+            parts = [part.strip() for part in line.split(",")]
+            source = int(parts[0].replace('"', ""))
+            destination = int(parts[1].replace('"', ""))
+            ping_avg = float(parts[4].replace('"', ""))
+            ping_std_dev = float(parts[6].replace('"', ""))
+            if source not in data:
+                data[source] = {}
+            if destination not in data[source]:
+                data[source][destination] = []
+            data[source][destination].append((ping_avg, ping_std_dev))
+
+    # Average the ping samples
+    for node1 in data:
+        for node2 in data[node1]:
+            pings_avg = [ping[0] for ping in data[node1][node2]]
+            pings_std_dev = [ping[1] for ping in data[node1][node2]]
+            data[node1][node2] = (
+                sum(pings_avg) / len(pings_avg),
+                sum(pings_std_dev) / len(pings_std_dev),
+            )
+
+    # Get all nodes
+    all_nodes = set()
+    for node1 in data:
+        all_nodes.add(node1)
+        for node2 in data[node1]:
+            all_nodes.add(node2)
+
+    # Fill missing B -> A if there's A -> B
+    for node1 in data:
+        for node2 in all_nodes:
+            if node2 not in data[node1] and node1 in data[node2]:
+                data[node1][node2] = data[node2][node1]
+
+    # Fill in missing pairs (A,B)
+    for node1 in data:
+        for node2 in all_nodes:
+            if node1 == node2:
+                continue
+            if node2 not in data[node1] and node1 not in data[node2]:
+                node2_neighbors = set(list(data[node2].keys()))
+                node1_neighbors = set(list(data[node1].keys()))
+                common_neighbors = node1_neighbors.intersection(node2_neighbors)
+                closest_to_node2 = -1
+                for neighbor in common_neighbors:
+                    if (
+                        closest_to_node2 == -1
+                        or data[node2][neighbor][0] < data[node2][closest_to_node2][0]
+                    ):
+                        closest_to_node2 = neighbor
+
+                new_ping = (
+                    data[node1][closest_to_node2][0] + data[node2][closest_to_node2][0]
+                )
+                new_ping_stddev = max(
+                    data[node1][closest_to_node2][1], data[node2][closest_to_node2][1]
+                )
+                data[node1][node2] = (new_ping, new_ping_stddev)
+
     return data

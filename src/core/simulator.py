@@ -68,6 +68,9 @@ class Simulator:
         node_receipt_counter: dict[NodeID, int] = collections.defaultdict(int)
 
         def add_event(queue: PriorityQueue, event: Event) -> PriorityQueue:
+            # Don't add impossible events
+            if event.timestamp == float("inf"):
+                return queue
             queue.put((event.timestamp, event.id, event))
             return queue
 
