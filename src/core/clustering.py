@@ -1,15 +1,15 @@
-""" Clustering """
+"""Clustering"""
 
 from sklearn.cluster import KMeans
 import numpy as np
 from collections import defaultdict
-from utils.basic_types import NodeID
+from utils.basic_types import Node, NodeID
 from core.network import Network
 
 
 def create_cluster_nodes(
-    network: Network, n_clusters: int = 9
-) -> tuple[dict[int, list[NodeID]], dict[NodeID, int]]:
+    network: Network, n_clusters: int = 9, with_inertia: bool = False
+) -> tuple[dict[int, list[Node]], dict[NodeID, int]]:
     """
     Clusters nodes in the given network using KMeans.
 
@@ -27,7 +27,7 @@ def create_cluster_nodes(
     kmeans = KMeans(n_clusters=n_clusters)
     clustering = kmeans.fit(positions)
 
-    cluster_map: dict[int, list[NodeID]] = defaultdict(list)
+    cluster_map: dict[int, list[Node]] = defaultdict(list)
     node_to_cluster_map: dict[NodeID, int] = {}
     for node, cluster_label in zip(network.nodes, clustering.labels_):
         cluster_map[cluster_label].append(node)
@@ -42,4 +42,6 @@ def create_cluster_nodes(
     if -1 in cluster_map:
         del cluster_map[-1]
 
+    if with_inertia:
+        return cluster_map, node_to_cluster_map, kmeans.inertia_
     return cluster_map, node_to_cluster_map

@@ -185,19 +185,20 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
         inter_cluster_probability: float,
         intra_cobra_walk_rho: float,
         fanout_inter: int,
-        num_clusters: int,
+        clusters: dict[int, list[Node]],
+        node_cluster: dict[NodeID, int],
         fanout_cobra: int = 2,
     ):
         super().__init__(network)
-        self.clusters, self.node_cluster = create_cluster_nodes(
-            self.network, n_clusters=num_clusters
-        )
+        self.clusters = clusters
+        self.node_cluster = node_cluster
         self.voronoi, self.voronoi_neighbors = create_voronoi(self.clusters)
 
         # Change ClusterID -> []Node to ClusterID -> []NodeID
+        self.clusters_to_id = {}
         for cluster_id, cluster_nodes in self.clusters.items():
             node_ids = [node.node_id for node in cluster_nodes]
-            self.clusters[cluster_id] = node_ids
+            self.clusters_to_id[cluster_id] = node_ids
 
         self.inter_cluster_probability = inter_cluster_probability
         self.intra_cobra_walk_rho = intra_cobra_walk_rho
@@ -211,10 +212,10 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
         intra_targets: list[NodeID] = []
         if bernoulli_event(self.intra_cobra_walk_rho):
             intra_targets = select_samples_from_group_without_replacement(
-                self.clusters[node_cluster_id], k=self.fanout_cobra
+                self.clusters_to_id[node_cluster_id], k=self.fanout_cobra
             )
         else:
-            intra_targets = [select_from_group(self.clusters[node_cluster_id])]
+            intra_targets = [select_from_group(self.clusters_to_id[node_cluster_id])]
 
         # Inter cluster: bernoulli
         inter_targets: list[NodeID] = []
@@ -225,7 +226,7 @@ class HierarchicalIntraCobraWalkInterBernoulliWithVoronoi(GossipAlgorithm):
             # Take all possible targets
             possible_targets: list[NodeID] = []
             for neighbour_cluster in neighbour_clusters:
-                possible_targets += self.clusters[neighbour_cluster]
+                possible_targets += self.clusters_to_id[neighbour_cluster]
 
             inter_targets = select_samples_from_group_without_replacement(
                 possible_targets, k=self.fanout_inter
